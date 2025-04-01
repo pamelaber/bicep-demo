@@ -1,5 +1,4 @@
 // Module to deploy a Key Vault with private access only
-
 param location string = 'eastus'
 param keyVaultName string
 param subnetId string // Subnet ID for private access,already exists
@@ -49,26 +48,15 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2021-10-
   }
 }
 */
-// Add a private endpoint for the Key Vault
-resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2021-05-01' = {
-  name: '${keyVaultName}-pe'
-  location: location
-  properties: {
-    subnet: {
-      id: subnetId // Reference the subnet for the private endpoint
-    }
-    privateLinkServiceConnections: [
-      {
-        name: '${keyVaultName}-connection'
-        properties: {
-          privateLinkServiceId: keyVault.id // Target the Key Vault
-          groupIds: ['vault']
-
-        }
-      }
-    ]
+module privateEndpointModule 'modules/privateEndpoint.bicep' = {
+  name: '${keyVaultName}-privateEndpoint'
+  params: {
+    zoneName: 'privatelink.vaultcore.azure.net'
+    location: location
+    privateLinkServiceId: keyVault.id // Target the Key Vault
+    subnetId: subnetId // Reference the subnet for the private endpoint
+    groupIds: ['vault']
   }
 }
-
 
 output keyVaultId string = keyVault.id // Output the Key Vault ID
